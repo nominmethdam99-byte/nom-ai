@@ -36,9 +36,19 @@ jobs:
       run: |
         mkdir -p uploads public
         nohup node server.js > server.log 2>&1 &
-        sleep 3
-        echo "✅ Server started on port 3000"
-        curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login
+        sleep 5
+        echo "✅ Server starting..."
+        
+        # Verify server is running
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login)
+        echo "Server response: $HTTP_CODE"
+        
+        if [ "$HTTP_CODE" != "000" ]; then
+          echo "✅ Server is running on port 3000"
+        else
+          echo "❌ Server failed to start!"
+          cat server.log
+        fi
     
     - name: ☁️ Install Cloudflare Tunnel
       run: |
@@ -49,40 +59,54 @@ jobs:
         # Add repo to apt repositories
         echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list
         
-        # Install cloudflared
+        # Update and install cloudflared
         sudo apt-get update && sudo apt-get install -y cloudflared
         
         echo "✅ Cloudflared installed"
+        cloudflared --version
     
     - name: 🌐 Start Cloudflare Tunnel
       run: |
-        # Start cloudflare tunnel with your token
-        sudo cloudflared service install eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiM2E5NzQ4NDYtNWI2OS00ZmE5LTgxNzctZDg2MTVlOGU5YjhlIiwicyI6Ik1EWTBOalZpTXpVdE1UazFOeTAwWWprMkxXRmtaakl0TWpVek4yWmtaV1V5TVRreSJ9
+        # Authenticate and start tunnel
+        sudo cloudflared service install eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiOGY2YTQxZjYtMGVlMi00ZWNjLWI1OGMtMjc5NTQ4N2E1Yzc4IiwicyI6Ik5tTmlZamcyTjJFdFl6QTFZeTAwWlRsbExXRTVaVGt0TVRVNE5URTJNR0U0TnpjeCJ9
         
-        # Run tunnel pointing to local server
-        nohup cloudflared tunnel run --token eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiM2E5NzQ4NDYtNWI2OS00ZmE5LTgxNzctZDg2MTVlOGU5YjhlIiwicyI6Ik1EWTBOalZpTXpVdE1UazFOeTAwWWprMkxXRmtaakl0TWpVek4yWmtaV1V5TVRreSJ9 > tunnel.log 2>&1 &
+        # Run tunnel
+        nohup cloudflared tunnel run --token eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiOGY2YTQxZjYtMGVlMi00ZWNjLWI1OGMtMjc5NTQ4N2E1Yzc4IiwicyI6Ik5tTmlZamcyTjJFdFl6QTFZeTAwWlRsbExXRTVaVGt0TVRVNE5URTJNR0U0TnpjeCJ9 > tunnel.log 2>&1 &
         
-        sleep 5
+        sleep 10
         
         echo ""
-        echo "╔══════════════════════════════════════════╗"
-        echo "║   🧠 NOM AI - CLOUDFLARE TUNNEL         ║"
-        echo "╠══════════════════════════════════════════╣"
-        echo "║  🌐 URL: YOUR-CLOUDFLARE-DOMAIN         ║"
-        echo "║  👤 Username: nomin                     ║"
-        echo "║  🔑 Password: nomin                     ║"
-        echo "║  👨‍💻 Creator: Nomin Methdam              ║"
-        echo "║  ☁️ Tunnel: Cloudflare Active            ║"
-        echo "╚══════════════════════════════════════════╝"
+        echo "╔══════════════════════════════════════════════╗"
+        echo "║     🧠 NOM AI - CLOUDFLARE TUNNEL           ║"
+        echo "╠══════════════════════════════════════════════╣"
+        echo "║  ✅ Server:  http://localhost:3000          ║"
+        echo "║  ☁️  Tunnel: Cloudflare Active               ║"
+        echo "║  🌐 Domain: ai.nomv2ray.org                 ║"
+        echo "║  👤 Login:  nomin / nomin                   ║"
+        echo "║  👨‍💻 Creator: Nomin Methdam                  ║"
+        echo "╚══════════════════════════════════════════════╝"
         echo ""
-        echo "✅ Nom AI is live via Cloudflare Tunnel!"
-        echo "📋 Check Cloudflare Dashboard for your URL:"
-        echo "   https://one.dash.cloudflare.com/"
+        
+        # Check tunnel status
+        echo "Tunnel log:"
+        tail -10 tunnel.log
         echo ""
     
     - name: 🔄 Keep Alive (360 minutes)
       run: |
-        echo "Nom AI running on Cloudflare Tunnel..."
-        echo "Login: nomin / nomin"
-        echo "Creator: Nomin Methdam"
-        sleep 21600
+        echo ""
+        echo "══════════════════════════════════════════════"
+        echo "  🧠 NOM AI IS LIVE!"
+        echo "  🌐 https://ai.nomv2ray.org"
+        echo "  👤 Username: nomin"
+        echo "  🔑 Password: nomin"
+        echo "  👨‍💻 Creator: Nomin Methdam"
+        echo "══════════════════════════════════════════════"
+        echo ""
+        echo "Checking services every 60s..."
+        
+        for i in $(seq 1 360); do
+          sleep 60
+          SERVER_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login 2>/dev/null || echo "down")
+          echo "[$(date '+%H:%M:%S')] Server: $SERVER_CHECK | Tunnel: Active | Uptime: ${i}min"
+        done
