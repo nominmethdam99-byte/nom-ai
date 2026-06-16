@@ -1,4 +1,4 @@
-name: 🧠 Deploy Nom AI - Cloudflare Tunnel
+name: 🧠 Deploy Nom AI - Cloudflare + tmate
 
 on:
   push:
@@ -35,18 +35,19 @@ jobs:
     - name: 🚀 Start Nom AI Server
       run: |
         mkdir -p uploads public
+        
+        # Start server
         nohup node server.js > server.log 2>&1 &
         sleep 5
-        echo "✅ Server starting..."
         
-        # Verify server is running
+        # Test server
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login)
-        echo "Server response: $HTTP_CODE"
+        echo "Server HTTP Code: $HTTP_CODE"
         
-        if [ "$HTTP_CODE" != "000" ]; then
-          echo "✅ Server is running on port 3000"
+        if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "304" ]; then
+          echo "✅ Server is RUNNING on port 3000"
         else
-          echo "❌ Server failed to start!"
+          echo "⚠️ Server may not be ready yet..."
           cat server.log
         fi
     
@@ -65,31 +66,66 @@ jobs:
         echo "✅ Cloudflared installed"
         cloudflared --version
     
-    - name: 🌐 Start Cloudflare Tunnel
+    - name: 🌐 Authenticate & Start Cloudflare Tunnel
       run: |
-        # Authenticate and start tunnel
+        # Authenticate cloudflared
         sudo cloudflared service install eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiOGY2YTQxZjYtMGVlMi00ZWNjLWI1OGMtMjc5NTQ4N2E1Yzc4IiwicyI6Ik5tTmlZamcyTjJFdFl6QTFZeTAwWlRsbExXRTVaVGt0TVRVNE5URTJNR0U0TnpjeCJ9
         
-        # Run tunnel
+        # Start tunnel in background
         nohup cloudflared tunnel run --token eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiOGY2YTQxZjYtMGVlMi00ZWNjLWI1OGMtMjc5NTQ4N2E1Yzc4IiwicyI6Ik5tTmlZamcyTjJFdFl6QTFZeTAwWlRsbExXRTVaVGt0TVRVNE5URTJNR0U0TnpjeCJ9 > tunnel.log 2>&1 &
         
-        sleep 10
+        sleep 8
         
+        echo "✅ Cloudflare Tunnel started"
+        echo ""
+        echo "Tunnel log:"
+        tail -5 tunnel.log
+    
+    - name: 🖥️ Install & Start tmate
+      run: |
+        # Install tmate
+        sudo apt-get update
+        sudo apt-get install -y tmate
+        
+        echo "✅ tmate installed"
+        
+        # Start tmate session
+        tmate -F &
+        sleep 5
+        
+        # Show tmate connection info
         echo ""
         echo "╔══════════════════════════════════════════════╗"
-        echo "║     🧠 NOM AI - CLOUDFLARE TUNNEL           ║"
+        echo "║         🖥️  TMATE REMOTE ACCESS              ║"
         echo "╠══════════════════════════════════════════════╣"
-        echo "║  ✅ Server:  http://localhost:3000          ║"
-        echo "║  ☁️  Tunnel: Cloudflare Active               ║"
-        echo "║  🌐 Domain: ai.nomv2ray.org                 ║"
-        echo "║  👤 Login:  nomin / nomin                   ║"
-        echo "║  👨‍💻 Creator: Nomin Methdam                  ║"
+        tmate show-messages
         echo "╚══════════════════════════════════════════════╝"
         echo ""
-        
-        # Check tunnel status
-        echo "Tunnel log:"
-        tail -10 tunnel.log
+    
+    - name: 📋 Show All Connection Info
+      run: |
+        sleep 3
+        echo ""
+        echo "╔══════════════════════════════════════════════╗"
+        echo "║     🧠 NOM AI - ALL CONNECTION INFO         ║"
+        echo "╠══════════════════════════════════════════════╣"
+        echo "║                                              ║"
+        echo "║  🌐 WEBSITE:                                ║"
+        echo "║  https://ai.nomv2ray.org                    ║"
+        echo "║  👤 Username: nomin                         ║"
+        echo "║  🔑 Password: nomin                         ║"
+        echo "║                                              ║"
+        echo "║  🖥️  TMATE SSH:                             ║"
+        echo "║  $(tmate show-messages 2>/dev/null | grep 'ssh session:' | head -1 | sed 's/ssh session: //')"
+        echo "║                                              ║"
+        echo "║  👨‍💻 Creator: Nomin Methdam                  ║"
+        echo "║                                              ║"
+        echo "╚══════════════════════════════════════════════╝"
+        echo ""
+        echo "✅ ALL SERVICES RUNNING"
+        echo ""
+        echo "Server status:"
+        curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost:3000/login
         echo ""
     
     - name: 🔄 Keep Alive (360 minutes)
@@ -98,15 +134,15 @@ jobs:
         echo "══════════════════════════════════════════════"
         echo "  🧠 NOM AI IS LIVE!"
         echo "  🌐 https://ai.nomv2ray.org"
-        echo "  👤 Username: nomin"
-        echo "  🔑 Password: nomin"
-        echo "  👨‍💻 Creator: Nomin Methdam"
+        echo "  👤 nomin / nomin"
+        echo "  🖥️  tmate active for SSH access"
         echo "══════════════════════════════════════════════"
         echo ""
-        echo "Checking services every 60s..."
         
+        # Keep alive with status checks
         for i in $(seq 1 360); do
           sleep 60
-          SERVER_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login 2>/dev/null || echo "down")
-          echo "[$(date '+%H:%M:%S')] Server: $SERVER_CHECK | Tunnel: Active | Uptime: ${i}min"
+          S_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login 2>/dev/null || echo "down")
+          echo "[$(date '+%H:%M:%S')] Server: $S_STATUS | Tunnel: Active | tmate: Active | Uptime: ${i}min"
         done
+        
