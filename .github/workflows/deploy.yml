@@ -1,4 +1,4 @@
-name: 🧠 Deploy Nom AI
+name: 🧠 Deploy Nom AI to Public URL
 
 on:
   push:
@@ -8,16 +8,66 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
       with:
         node-version: '20'
-    - run: npm install express cors multer express-session axios cheerio
-    - name: Test Server
+    
+    - name: 📚 Install Dependencies
       run: |
-        nohup node server.js &
+        npm init -y
+        npm install express cors multer express-session axios cheerio
+    
+    - name: 🧠 Install Ollama & AI Models
+      run: |
+        curl -fsSL https://ollama.com/install.sh | sh
+        ollama serve &
+        sleep 5
+        ollama pull llama3.2
+        echo "✅ Ollama ready"
+    
+    - name: 🚀 Start Nom AI Server
+      run: |
+        mkdir -p uploads public
+        nohup node server.js > server.log 2>&1 &
         sleep 3
-        curl http://localhost:3000/login
-    - name: Deploy Success
-      run: echo "✅ Nom AI by Nomin Methdam Deployed!"
+        echo "✅ Server started"
+        curl -I http://localhost:3000/login || echo "Server check done"
+    
+    - name: 🌐 Create Public Tunnel
+      run: |
+        # Install bore
+        wget -q https://github.com/ekzhang/bore/releases/download/v0.5.2/bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
+        tar -xzf bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
+        chmod +x bore
+        
+        # Start bore tunnel
+        nohup ./bore local 3000 --to bore.pub --port nom-ai > bore.log 2>&1 &
+        sleep 5
+        
+        echo ""
+        echo "╔══════════════════════════════════════════╗"
+        echo "║     🧠 NOM AI IS NOW LIVE!              ║"
+        echo "╠══════════════════════════════════════════╣"
+        echo "║  🌐 URL: http://bore.pub:nom-ai         ║"
+        echo "║  👤 Username: nomin                     ║"
+        echo "║  🔑 Password: nomin                     ║"
+        echo "║  👨‍💻 Creator: Nomin Methdam              ║"
+        echo "╚══════════════════════════════════════════╝"
+        echo ""
+        echo "Open this in your browser:"
+        echo "👉 http://bore.pub:nom-ai"
+        echo ""
+    
+    - name: 🔄 Keep Alive (360 minutes)
+      run: |
+        echo "Nom AI is running..."
+        echo "Visit: http://bore.pub:nom-ai"
+        echo "Login: nomin / nomin"
+        sleep 21600
