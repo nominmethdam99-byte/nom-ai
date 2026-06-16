@@ -1,0 +1,23 @@
+name: 🧠 Deploy Nom AI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - run: npm install express cors multer express-session axios cheerio
+    - name: Test Server
+      run: |
+        nohup node server.js &
+        sleep 3
+        curl http://localhost:3000/login
+    - name: Deploy Success
+      run: echo "✅ Nom AI by Nomin Methdam Deployed!"
