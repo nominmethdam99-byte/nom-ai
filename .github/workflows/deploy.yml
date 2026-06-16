@@ -1,4 +1,4 @@
-name: 🧠 Deploy Nom AI - bore + tmate
+name: ⚡ DeepNom Ultra Fast AI
 
 on:
   push:
@@ -11,85 +11,42 @@ jobs:
     timeout-minutes: 360
     
     steps:
-    - name: 📥 Checkout Code
-      uses: actions/checkout@v4
-    
-    - name: 📦 Setup Node.js
-      uses: actions/setup-node@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '20'
     
-    - name: 📚 Install Dependencies
+    - name: 📚 Install
       run: |
         npm init -y
-        npm install express cors multer express-session axios cheerio
+        npm install express cors express-session
     
-    - name: 🧠 Install Ollama & AI Models
+    - name: 🧠 Ollama
       run: |
         curl -fsSL https://ollama.com/install.sh | sh
         ollama serve &
         sleep 5
         ollama pull llama3.2
-        echo "✅ Ollama ready"
+        echo "✅ Ready"
     
-    - name: 🚀 Start Nom AI Server
+    - name: 🚀 Start Server
       run: |
         mkdir -p uploads public
         node server.js &
-        sleep 5
-        curl -s http://localhost:3000/login && echo "✅ Server OK" || echo "❌ Server FAILED"
+        sleep 3
+        curl -s http://localhost:3000/login && echo "✅ OK"
     
-    - name: 🌐 Install bore & Start Tunnel
+    - name: 🌐 bore Tunnel
       run: |
-        # Download and install bore
         wget -q https://github.com/ekzhang/bore/releases/download/v0.5.2/bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
         tar -xzf bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
-        chmod +x bore
-        sudo mv bore /usr/local/bin/
-        echo "✅ bore installed"
-        
-        # Start bore tunnel
+        chmod +x bore && sudo mv bore /usr/local/bin/
         nohup bore local 3000 --to bore.pub > bore.log 2>&1 &
         sleep 5
-        
-        # Show the URL
-        echo ""
-        echo "╔══════════════════════════════════════════╗"
-        echo "║     🌐 NOM AI - bore.pub TUNNEL         ║"
-        echo "╠══════════════════════════════════════════╣"
-        echo "║  👤 Username: nomin                     ║"
-        echo "║  🔑 Password: nomin                     ║"
-        echo "║  👨‍💻 Creator: Nomin Methdam              ║"
-        echo "╠══════════════════════════════════════════╣"
-        echo "║  📋 Bore URL:                           ║"
-        grep -o 'bore.pub:[0-9]*' bore.log | head -1 | xargs -I {} echo "║  http://{}                    ║"
-        echo "╚══════════════════════════════════════════╝"
+        echo "🌐 http://$(grep -o 'bore.pub:[0-9]*' bore.log)"
     
-    - name: 🖥️ Install & Start tmate
+    - name: 🔄 Keep Alive
       run: |
-        sudo apt-get install -y tmate
-        tmate -S /tmp/tmate.sock new-session -d
-        tmate -S /tmp/tmate.sock wait tmate-ready
-        echo ""
-        echo "╔══════════════════════════════════════════╗"
-        echo "║     🖥️  TMATE REMOTE ACCESS              ║"
-        echo "╠══════════════════════════════════════════╣"
-        tmate -S /tmp/tmate.sock display -p "║  Web: https://tmate.io/t/#{tmate_ssh}"
-        tmate -S /tmp/tmate.sock display -p "║  SSH: ssh #{tmate_ssh}"
-        echo "╚══════════════════════════════════════════╝"
-    
-    - name: 🔄 Keep Alive (360 minutes)
-      run: |
-        BORE_URL=$(grep -o 'bore.pub:[0-9]*' bore.log | head -1)
-        echo ""
-        echo "╔══════════════════════════════════════════╗"
-        echo "║       🧠 NOM AI IS LIVE!                ║"
-        echo "╠══════════════════════════════════════════╣"
-        echo "║  🌐 http://$BORE_URL       ║"
-        echo "║  👤 nomin / nomin                       ║"
-        echo "║  👨‍💻 Nomin Methdam                       ║"
-        echo "╚══════════════════════════════════════════╝"
-        echo ""
         for i in $(seq 1 360); do
           sleep 60
           echo "[$(date '+%H:%M')] Uptime: ${i}min"
