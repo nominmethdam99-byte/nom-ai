@@ -1,0 +1,19 @@
+{
+  "name": "nom-ai",
+  "version": "1.0.0",
+  "description": "Nom AI - The Most Perfect AI by Nomin Methdam",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Nomin Methdam",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "express-session": "^1.18.0",
+    "axios": "^1.7.0",
+    "cheerio": "^1.0.0"
+  }
+}
