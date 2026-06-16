@@ -1,4 +1,4 @@
-name: ⚡ DeepNom Ultra Fast AI
+name: 🧠 Ultra AI v8.0
 
 on:
   push:
@@ -9,45 +9,32 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 360
-    
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with:
         node-version: '20'
-    
-    - name: 📚 Install
-      run: |
+    - run: |
         npm init -y
         npm install express cors express-session
-    
-    - name: 🧠 Ollama
-      run: |
+    - run: |
         curl -fsSL https://ollama.com/install.sh | sh
         ollama serve &
         sleep 5
         ollama pull llama3.2
-        echo "✅ Ready"
-    
-    - name: 🚀 Start Server
-      run: |
+    - run: |
         mkdir -p uploads public
         node server.js &
         sleep 3
-        curl -s http://localhost:3000/login && echo "✅ OK"
-    
-    - name: 🌐 bore Tunnel
-      run: |
+    - run: |
         wget -q https://github.com/ekzhang/bore/releases/download/v0.5.2/bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
         tar -xzf bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
         chmod +x bore && sudo mv bore /usr/local/bin/
         nohup bore local 3000 --to bore.pub > bore.log 2>&1 &
         sleep 5
         echo "🌐 http://$(grep -o 'bore.pub:[0-9]*' bore.log)"
-    
-    - name: 🔄 Keep Alive
-      run: |
+    - run: |
         for i in $(seq 1 360); do
           sleep 60
-          echo "[$(date '+%H:%M')] Uptime: ${i}min"
+          echo "[$(date '+%H:%M')] Ultra AI v8.0 Uptime: ${i}min"
         done
