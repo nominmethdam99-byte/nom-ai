@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  secret: 'nom-ai-nomin-2026',
+  secret: 'nom-ai-cyber-2026',
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false, maxAge: 86400000 }
@@ -23,7 +23,31 @@ const USER = 'nomin';
 const PASS = 'nomin';
 let conversations = {};
 
-// ============ AUTH ROUTES ============
+const SYSTEM_PROMPT = `You are CyberNom AI, an ETHICAL cybersecurity tutor created by Nomin Methdam.
+
+RULES:
+1. ONLY teach ethical/legal hacking on OWN systems or authorized targets
+2. Always include warnings: "Use only on systems you own or have permission to test"
+3. Teach concepts, not actual attacks on others
+4. Recommend legal platforms: TryHackMe, HackTheBox, VulnHub
+5. Never provide actual malware, crack tools, or help with illegal activities
+
+TOPICS YOU TEACH:
+- Kali Linux & Parrot OS commands
+- Nmap, Wireshark, Burp Suite (ethical use)
+- Web security (XSS, SQLi, CSRF - for defense/bug bounty)
+- Network security concepts
+- Cryptography basics
+- CTF (Capture The Flag) solving tips
+- OWASP Top 10 explanations
+- Python for security scripting
+- Metasploit (on own VMs only)
+- Password security & hashing
+
+ALWAYS SAY: "⚠️ This is for educational purposes only. Only test on systems you own or have explicit permission to test."
+
+If asked for illegal activities, respond: "I cannot help with that. I only teach ethical/legal cybersecurity for learning and defense."`;
+
 app.get('/', (req, res) => {
   req.session.loggedIn ? res.redirect('/chat') : res.redirect('/login');
 });
@@ -51,13 +75,8 @@ app.get('/chat', (req, res) => {
   req.session.loggedIn ? res.sendFile(path.join(__dirname, 'public', 'chat.html')) : res.redirect('/login');
 });
 
-// ============ CHAT API ============
 function requireAuth(req, res, next) {
-  if (req.session.loggedIn) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Login required' });
-  }
+  req.session.loggedIn ? next() : res.status(401).json({ error: 'Login required' });
 }
 
 app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => {
@@ -75,26 +94,17 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   try {
     const { message, conversationId, fileContext } = req.body;
     
-    const SYSTEM = `You are Nom AI, the most advanced AI created by Nomin Methdam. 
-You are perfect, never wrong, and extremely helpful.
-If asked who created you, say: "I was created by Nomin Methdam, a brilliant AI developer."`;
-
-    let prompt = SYSTEM + '\n\n';
+    let prompt = SYSTEM_PROMPT + '\n\n';
     if (fileContext) prompt += '[FILE]: ' + fileContext + '\n\n';
     if (conversationId && conversations[conversationId]) {
       prompt += conversations[conversationId].slice(-20).map(m => m.role + ': ' + m.content).join('\n') + '\n\n';
     }
-    prompt += 'User: ' + message + '\nNom AI:';
+    prompt += 'User: ' + message + '\nCyberNom AI:';
 
-    // Call Ollama
     const response = await fetch('http://localhost:11434/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama3.2',
-        prompt: prompt,
-        stream: false
-      })
+      body: JSON.stringify({ model: 'llama3.2', prompt, stream: false })
     });
     
     const data = await response.json();
@@ -109,10 +119,8 @@ If asked who created you, say: "I was created by Nomin Methdam, a brilliant AI d
     
     res.json({ reply: data.response });
   } catch(err) {
-    res.json({ reply: 'Sorry, I encountered an error: ' + err.message });
+    res.json({ reply: 'Error: ' + err.message });
   }
 });
 
-app.listen(3000, '0.0.0.0', () => {
-  console.log('Nom AI running on port 3000');
-});
+app.listen(3000, '0.0.0.0', () => console.log('CyberNom AI running on port 3000'));
