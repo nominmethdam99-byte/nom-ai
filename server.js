@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-  secret: 'nom-ai-cyber-2026',
+  secret: 'nom-fast-2026',
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false, maxAge: 86400000 }
@@ -22,31 +22,12 @@ app.use(express.static('public'));
 const USER = 'nomin';
 const PASS = 'nomin';
 let conversations = {};
+let responseCache = new Map();
 
-const SYSTEM_PROMPT = `You are CyberNom AI, an ETHICAL cybersecurity tutor created by Nomin Methdam.
-
-RULES:
-1. ONLY teach ethical/legal hacking on OWN systems or authorized targets
-2. Always include warnings: "Use only on systems you own or have permission to test"
-3. Teach concepts, not actual attacks on others
-4. Recommend legal platforms: TryHackMe, HackTheBox, VulnHub
-5. Never provide actual malware, crack tools, or help with illegal activities
-
-TOPICS YOU TEACH:
-- Kali Linux & Parrot OS commands
-- Nmap, Wireshark, Burp Suite (ethical use)
-- Web security (XSS, SQLi, CSRF - for defense/bug bounty)
-- Network security concepts
-- Cryptography basics
-- CTF (Capture The Flag) solving tips
-- OWASP Top 10 explanations
-- Python for security scripting
-- Metasploit (on own VMs only)
-- Password security & hashing
-
-ALWAYS SAY: "⚠️ This is for educational purposes only. Only test on systems you own or have explicit permission to test."
-
-If asked for illegal activities, respond: "I cannot help with that. I only teach ethical/legal cybersecurity for learning and defense."`;
+const SYSTEM_PROMPT = `You are CyberNom AI, an ETHICAL cybersecurity tutor by Nomin Methdam.
+You teach hacking legally. Only for systems you OWN or have permission.
+Be concise and fast. Give commands and explanations directly.
+Topics: Kali, Nmap, Metasploit, Web Security, CTF, Crypto, Python hacking.`;
 
 app.get('/', (req, res) => {
   req.session.loggedIn ? res.redirect('/chat') : res.redirect('/login');
@@ -62,7 +43,7 @@ app.post('/login', (req, res) => {
     req.session.loggedIn = true;
     res.json({ success: true, redirect: '/chat' });
   } else {
-    res.status(401).json({ success: false, message: 'Invalid credentials' });
+    res.status(401).json({ success: false });
   }
 });
 
@@ -79,43 +60,41 @@ function requireAuth(req, res, next) {
   req.session.loggedIn ? next() : res.status(401).json({ error: 'Login required' });
 }
 
-app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) return res.json({ error: 'No file' });
-    let content = fs.readFileSync(req.file.path, 'utf8').substring(0, 50000);
-    fs.unlinkSync(req.file.path);
-    res.json({ filename: req.file.originalname, content, size: req.file.size });
-  } catch(err) {
-    res.json({ error: err.message });
-  }
-});
-
 app.post('/api/chat', requireAuth, async (req, res) => {
   try {
-    const { message, conversationId, fileContext } = req.body;
+    const { message } = req.body;
     
-    let prompt = SYSTEM_PROMPT + '\n\n';
-    if (fileContext) prompt += '[FILE]: ' + fileContext + '\n\n';
-    if (conversationId && conversations[conversationId]) {
-      prompt += conversations[conversationId].slice(-20).map(m => m.role + ': ' + m.content).join('\n') + '\n\n';
+    // Check cache first for speed
+    const cacheKey = message.toLowerCase().trim();
+    if (responseCache.has(cacheKey)) {
+      return res.json({ reply: responseCache.get(cacheKey) + '\n\n⚡ [Cached Response]' });
     }
-    prompt += 'User: ' + message + '\nCyberNom AI:';
+    
+    let prompt = SYSTEM_PROMPT + '\n\nUser: ' + message + '\nAI:';
 
+    // Use faster model with optimized settings
     const response = await fetch('http://localhost:11434/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'llama3.2', prompt, stream: false })
+      body: JSON.stringify({
+        model: 'llama3.2',
+        prompt: prompt,
+        stream: false,
+        options: {
+          num_predict: 512,        // Shorter response = faster
+          temperature: 0.1,        // Less creative = faster
+          top_k: 10,               // Fewer tokens = faster
+          top_p: 0.5,
+          num_thread: 8            // Use all CPU threads
+        }
+      })
     });
     
     const data = await response.json();
     
-    if (conversationId) {
-      if (!conversations[conversationId]) conversations[conversationId] = [];
-      conversations[conversationId].push(
-        { role: 'user', content: message },
-        { role: 'assistant', content: data.response }
-      );
-    }
+    // Cache the response
+    if (responseCache.size > 100) responseCache.clear();
+    responseCache.set(cacheKey, data.response);
     
     res.json({ reply: data.response });
   } catch(err) {
@@ -123,4 +102,4 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   }
 });
 
-app.listen(3000, '0.0.0.0', () => console.log('CyberNom AI running on port 3000'));
+app.listen(3000, '0.0.0.0', () => console.log('Fast CyberNom AI on port 3000'));
