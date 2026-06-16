@@ -1,4 +1,4 @@
-name: 🧠 Deploy Nom AI to Public URL
+name: 🧠 Deploy Nom AI - Cloudflare Tunnel
 
 on:
   push:
@@ -37,37 +37,52 @@ jobs:
         mkdir -p uploads public
         nohup node server.js > server.log 2>&1 &
         sleep 3
-        echo "✅ Server started"
-        curl -I http://localhost:3000/login || echo "Server check done"
+        echo "✅ Server started on port 3000"
+        curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login
     
-    - name: 🌐 Create Public Tunnel
+    - name: ☁️ Install Cloudflare Tunnel
       run: |
-        # Install bore
-        wget -q https://github.com/ekzhang/bore/releases/download/v0.5.2/bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
-        tar -xzf bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
-        chmod +x bore
+        # Add cloudflare gpg key
+        sudo mkdir -p --mode=0755 /usr/share/keyrings
+        curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
         
-        # Start bore tunnel
-        nohup ./bore local 3000 --to bore.pub --port nom-ai > bore.log 2>&1 &
+        # Add repo to apt repositories
+        echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list
+        
+        # Install cloudflared
+        sudo apt-get update && sudo apt-get install -y cloudflared
+        
+        echo "✅ Cloudflared installed"
+    
+    - name: 🌐 Start Cloudflare Tunnel
+      run: |
+        # Start cloudflare tunnel with your token
+        sudo cloudflared service install eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiM2E5NzQ4NDYtNWI2OS00ZmE5LTgxNzctZDg2MTVlOGU5YjhlIiwicyI6Ik1EWTBOalZpTXpVdE1UazFOeTAwWWprMkxXRmtaakl0TWpVek4yWmtaV1V5TVRreSJ9
+        
+        # Run tunnel pointing to local server
+        nohup cloudflared tunnel run --token eyJhIjoiMTFmODIyMGNmODllNGRjOWMwY2U3N2Q5YjlhMTU3N2MiLCJ0IjoiM2E5NzQ4NDYtNWI2OS00ZmE5LTgxNzctZDg2MTVlOGU5YjhlIiwicyI6Ik1EWTBOalZpTXpVdE1UazFOeTAwWWprMkxXRmtaakl0TWpVek4yWmtaV1V5TVRreSJ9 > tunnel.log 2>&1 &
+        
         sleep 5
         
         echo ""
         echo "╔══════════════════════════════════════════╗"
-        echo "║     🧠 NOM AI IS NOW LIVE!              ║"
+        echo "║   🧠 NOM AI - CLOUDFLARE TUNNEL         ║"
         echo "╠══════════════════════════════════════════╣"
-        echo "║  🌐 URL: http://bore.pub:nom-ai         ║"
+        echo "║  🌐 URL: YOUR-CLOUDFLARE-DOMAIN         ║"
         echo "║  👤 Username: nomin                     ║"
         echo "║  🔑 Password: nomin                     ║"
         echo "║  👨‍💻 Creator: Nomin Methdam              ║"
+        echo "║  ☁️ Tunnel: Cloudflare Active            ║"
         echo "╚══════════════════════════════════════════╝"
         echo ""
-        echo "Open this in your browser:"
-        echo "👉 http://bore.pub:nom-ai"
+        echo "✅ Nom AI is live via Cloudflare Tunnel!"
+        echo "📋 Check Cloudflare Dashboard for your URL:"
+        echo "   https://one.dash.cloudflare.com/"
         echo ""
     
     - name: 🔄 Keep Alive (360 minutes)
       run: |
-        echo "Nom AI is running..."
-        echo "Visit: http://bore.pub:nom-ai"
+        echo "Nom AI running on Cloudflare Tunnel..."
         echo "Login: nomin / nomin"
+        echo "Creator: Nomin Methdam"
         sleep 21600
